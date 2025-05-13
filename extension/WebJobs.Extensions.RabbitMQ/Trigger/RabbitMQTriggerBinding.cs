@@ -21,11 +21,13 @@ internal class RabbitMQTriggerBinding : ITriggerBinding
     private readonly Type parameterType;
     private readonly string queueName;
     private readonly ushort prefetchCount;
+    private readonly bool manualAck;
 
-    public RabbitMQTriggerBinding(IRabbitMQService service, string queueName, ILogger logger, Type parameterType, ushort prefetchCount)
+    public RabbitMQTriggerBinding(IRabbitMQService service, string queueName, bool manualAck, ILogger logger, Type parameterType, ushort prefetchCount)
     {
         this.service = service;
         this.queueName = queueName;
+        this.manualAck = manualAck;
         this.logger = logger;
         this.parameterType = parameterType;
         this.prefetchCount = prefetchCount;
@@ -39,7 +41,7 @@ internal class RabbitMQTriggerBinding : ITriggerBinding
     public Task<ITriggerData> BindAsync(object value, ValueBindingContext context)
     {
         var message = (BasicDeliverEventArgs)value;
-        IReadOnlyDictionary<string, object> bindingData = CreateBindingData(message);
+        IReadOnlyDictionary<string, object> bindingData = CreateBindingData(message, new RabbitMQMessageActions(this.service.Model));
 
         return Task.FromResult<ITriggerData>(new TriggerData(new BasicDeliverEventArgsValueProvider(message, this.parameterType), bindingData));
     }
@@ -48,7 +50,7 @@ internal class RabbitMQTriggerBinding : ITriggerBinding
     {
         _ = context ?? throw new ArgumentNullException(nameof(context));
 
-        return Task.FromResult<IListener>(new RabbitMQListener(context.Executor, this.service, this.queueName, this.logger, context.Descriptor, this.prefetchCount));
+        return Task.FromResult<IListener>(new RabbitMQListener(context.Executor, this.service, this.queueName, this.manualAck, this.logger, context.Descriptor, this.prefetchCount));
     }
 
     public ParameterDescriptor ToParameterDescriptor()
@@ -70,12 +72,13 @@ internal class RabbitMQTriggerBinding : ITriggerBinding
             ["RoutingKey"] = typeof(string),
             ["BasicProperties"] = typeof(IBasicProperties),
             ["Body"] = typeof(ReadOnlyMemory<byte>),
+            ["MessageActions"] = typeof(RabbitMQMessageActions),
         };
 
         return contract;
     }
 
-    internal static IReadOnlyDictionary<string, object> CreateBindingData(BasicDeliverEventArgs value)
+    internal static IReadOnlyDictionary<string, object> CreateBindingData(BasicDeliverEventArgs value, RabbitMQMessageActions messageActions)
     {
         var bindingData = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
@@ -86,6 +89,7 @@ internal class RabbitMQTriggerBinding : ITriggerBinding
         SafeAddValue(() => bindingData.Add(nameof(value.RoutingKey), value.RoutingKey));
         SafeAddValue(() => bindingData.Add(nameof(value.BasicProperties), value.BasicProperties));
         SafeAddValue(() => bindingData.Add(nameof(value.Body), value.Body));
+        SafeAddValue(() => bindingData.Add(nameof(messageActions), messageActions));
 
         return bindingData;
     }

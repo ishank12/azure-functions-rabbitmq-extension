@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
@@ -28,6 +29,7 @@ internal sealed class RabbitMQListener : IListener, IScaleMonitor<RabbitMQTrigge
     private readonly ITriggeredFunctionExecutor executor;
     private readonly string queueName;
     private readonly ushort prefetchCount;
+    private readonly bool manualAck;
     private readonly IRabbitMQService service;
     private readonly ILogger logger;
     private readonly string functionId;
@@ -42,6 +44,7 @@ internal sealed class RabbitMQListener : IListener, IScaleMonitor<RabbitMQTrigge
         ITriggeredFunctionExecutor executor,
         IRabbitMQService service,
         string queueName,
+        bool manualAck,
         ILogger logger,
         FunctionDescriptor functionDescriptor,
         ushort prefetchCount)
@@ -49,12 +52,19 @@ internal sealed class RabbitMQListener : IListener, IScaleMonitor<RabbitMQTrigge
         this.executor = executor;
         this.service = service;
         this.queueName = queueName;
+        this.manualAck = manualAck;
         this.logger = logger;
         this.rabbitMQModel = this.service.RabbitMQModel;
         _ = functionDescriptor ?? throw new ArgumentNullException(nameof(functionDescriptor));
         this.functionId = functionDescriptor.Id;
         this.Descriptor = new ScaleMonitorDescriptor($"{this.functionId}-RabbitMQTrigger-{this.queueName}".ToLowerInvariant());
         this.prefetchCount = prefetchCount;
+
+        // Add a handler to log any errors that occur on the channel.
+        this.service.Model.ModelShutdown += (sender, args) =>
+        {
+            logger.LogError(message: $"[!] Channel closed due to error: {args.ReplyText}");
+        };
     }
 
     public ScaleMonitorDescriptor Descriptor { get; }
@@ -120,9 +130,15 @@ internal sealed class RabbitMQListener : IListener, IScaleMonitor<RabbitMQTrigge
                 this.logger.LogDebug("Republishing message");
                 args.BasicProperties.Headers[RequeueCountHeaderName] = requeueCount;
                 this.rabbitMQModel.BasicPublish(exchange: string.Empty, routingKey: this.queueName, args.BasicProperties, args.Body);
-            }
 
-            this.rabbitMQModel.BasicAck(args.DeliveryTag, false);
+                // Acknowledge the existing message after the message is re-published.
+                this.rabbitMQModel.BasicAck(args.DeliveryTag, multiple: false);
+            }
+            else if (!this.manualAck)
+            {
+                // Acknowledge the existing message if manualAck is not set and function execution was successful.
+                this.rabbitMQModel.BasicAck(args.DeliveryTag, false);
+            }
         };
 
         this.consumerTag = this.rabbitMQModel.BasicConsume(queue: this.queueName, autoAck: false, consumer: this.consumer);
@@ -201,13 +217,13 @@ internal sealed class RabbitMQListener : IListener, IScaleMonitor<RabbitMQTrigge
         }
     }
 
-    private static bool IsTrueForLast(IList<RabbitMQTriggerMetrics> samples, int count, Func<RabbitMQTriggerMetrics, RabbitMQTriggerMetrics, bool> predicate)
+    private static bool IsTrueForLast(RabbitMQTriggerMetrics[] samples, int count, Func<RabbitMQTriggerMetrics, RabbitMQTriggerMetrics, bool> predicate)
     {
         Debug.Assert(count > 1, "count must be greater than 1.");
-        Debug.Assert(count <= samples.Count, "count must be less than or equal to the list size.");
+        Debug.Assert(count <= samples.Length, "count must be less than or equal to the array size.");
 
-        // Walks through the list from left to right starting at len(samples) - count.
-        for (int i = samples.Count - count; i < samples.Count - 1; i++)
+        // Walks through the array from left to right starting at len(samples) - count.
+        for (int i = samples.Length - count; i < samples.Length - 1; i++)
         {
             if (!predicate(samples[i], samples[i + 1]))
             {

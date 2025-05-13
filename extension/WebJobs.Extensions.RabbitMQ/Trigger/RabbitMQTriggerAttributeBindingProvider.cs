@@ -49,10 +49,11 @@ internal class RabbitMQTriggerAttributeBindingProvider : ITriggerBindingProvider
         string connectionString = Utility.ResolveConnectionString(attribute.ConnectionStringSetting, this.options.Value.ConnectionString, this.configuration);
         string queueName = this.Resolve(attribute.QueueName) ?? throw new InvalidOperationException("RabbitMQ queue name is missing");
         bool disableCertificateValidation = attribute.DisableCertificateValidation || this.options.Value.DisableCertificateValidation;
+        bool manualAck = attribute.ManualAck;
 
         IRabbitMQService service = this.provider.GetService(connectionString, queueName, disableCertificateValidation);
 
-        return Task.FromResult<ITriggerBinding>(new RabbitMQTriggerBinding(service, queueName, this.logger, parameter.ParameterType, this.options.Value.PrefetchCount));
+        return Task.FromResult<ITriggerBinding>(new RabbitMQTriggerBinding(service, queueName, manualAck, this.logger, parameter.ParameterType, this.options.Value.PrefetchCount));
     }
 
     private string Resolve(string name)

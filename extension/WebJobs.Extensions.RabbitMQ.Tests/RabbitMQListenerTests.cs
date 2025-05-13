@@ -33,7 +33,7 @@ public class RabbitMQListenerTests
         var queueInfo = new QueueDeclareOk("blah", 5, 1);
         this.mockModel.Setup(m => m.QueueDeclarePassive(It.IsAny<string>())).Returns(queueInfo);
 
-        this.testListener = new RabbitMQListener(this.mockExecutor.Object, this.mockService.Object, "blah", this.mockLogger.Object, new FunctionDescriptor { Id = "TestFunction" }, 30);
+        this.testListener = new RabbitMQListener(this.mockExecutor.Object, this.mockService.Object, "blah", false, this.mockLogger.Object, new FunctionDescriptor { Id = "TestFunction" }, 30);
     }
 
     // Created https://github.com/Azure/azure-functions-rabbitmq-extension/issues/214 for re-enabling the unit tests.
@@ -92,7 +92,7 @@ public class RabbitMQListenerTests
     [Fact]
     public async Task GetMetrics_ReturnsExpectedResult()
     {
-        var listener = new RabbitMQListener(this.mockExecutor.Object, this.mockService.Object, "listener_test_queue", this.mockLogger.Object, new FunctionDescriptor { Id = "TestFunction" }, 30);
+        var listener = new RabbitMQListener(this.mockExecutor.Object, this.mockService.Object, "listener_test_queue", false, this.mockLogger.Object, new FunctionDescriptor { Id = "TestFunction" }, 30);
         RabbitMQTriggerMetrics metrics = await listener.GetMetricsAsync();
 
         Assert.Equal(5U, metrics.QueueLength);

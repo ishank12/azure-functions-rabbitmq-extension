@@ -38,4 +38,9 @@ public sealed class RabbitMQTriggerAttribute : Attribute
     /// production. Does not apply when SSL is disabled.
     /// </summary>
     public bool DisableCertificateValidation { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether message acknowledgements would be done manually.
+    /// </summary>
+    public bool ManualAck { get; set; }
 }
