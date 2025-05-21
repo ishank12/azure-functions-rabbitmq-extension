@@ -46,7 +46,7 @@ public class RabbitMQTriggerBindingTests
 
         ReadOnlyMemory<byte> body = buffer;
         var eventArgs = new BasicDeliverEventArgs("ConsumerName", deliveryTag, false, "n/a", "QueueName", null, body);
-        var messageActions = new RabbitMQMessageActions(Mock.Of<IModel>());
+        var messageActions = new RabbitMQMessageActions(Mock.Of<IModel>(), eventArgs);
 
         var data = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
         {
@@ -72,7 +72,7 @@ public class RabbitMQTriggerBindingTests
     public void RabbitMQTriggerAttribute_ManualAck_DefaultsToFalse()
     {
         var attribute = new RabbitMQTriggerAttribute("test-queue");
-        bool manualAck = attribute.ManualAck;
+        bool manualAck = attribute.DisableAck;
         Assert.False(manualAck, "ManualAck should default to false.");
     }
 
@@ -87,7 +87,7 @@ public class RabbitMQTriggerBindingTests
 
         ReadOnlyMemory<byte> body = buffer;
         var eventArgs = new BasicDeliverEventArgs("ConsumerName", deliveryTag, false, "n/a", "QueueName", null, body);
-        var messageActions = new RabbitMQMessageActions(Mock.Of<IModel>());
+        var messageActions = new RabbitMQMessageActions(Mock.Of<IModel>(), eventArgs);
 
         IReadOnlyDictionary<string, object> bindingData = RabbitMQTriggerBinding.CreateBindingData(eventArgs, messageActions);
 

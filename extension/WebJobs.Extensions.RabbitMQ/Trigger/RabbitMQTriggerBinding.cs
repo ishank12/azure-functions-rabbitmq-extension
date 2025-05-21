@@ -21,19 +21,17 @@ internal class RabbitMQTriggerBinding : ITriggerBinding
     private readonly Type parameterType;
     private readonly string queueName;
     private readonly ushort prefetchCount;
-    private readonly bool manualAck;
-    private readonly RabbitMQMessageActions messageActions;
+    private readonly bool disableAck;
 
-    public RabbitMQTriggerBinding(IRabbitMQService service, string queueName, bool manualAck, ILogger logger, Type parameterType, ushort prefetchCount)
+    public RabbitMQTriggerBinding(IRabbitMQService service, string queueName, bool disableAck, ILogger logger, Type parameterType, ushort prefetchCount)
     {
         this.service = service;
         this.queueName = queueName;
-        this.manualAck = manualAck;
+        this.disableAck = disableAck;
         this.logger = logger;
         this.parameterType = parameterType;
         this.prefetchCount = prefetchCount;
         this.BindingDataContract = CreateBindingDataContract();
-        this.messageActions = new RabbitMQMessageActions(this.service.Model);
     }
 
     public Type TriggerValueType => typeof(BasicDeliverEventArgs);
@@ -43,7 +41,7 @@ internal class RabbitMQTriggerBinding : ITriggerBinding
     public Task<ITriggerData> BindAsync(object value, ValueBindingContext context)
     {
         var message = (BasicDeliverEventArgs)value;
-        IReadOnlyDictionary<string, object> bindingData = CreateBindingData(message, this.messageActions);
+        IReadOnlyDictionary<string, object> bindingData = CreateBindingData(message, this.disableAck ? new RabbitMQMessageActions(this.service.Model, message) : null);
 
         return Task.FromResult<ITriggerData>(new TriggerData(new BasicDeliverEventArgsValueProvider(message, this.parameterType), bindingData));
     }
@@ -52,7 +50,7 @@ internal class RabbitMQTriggerBinding : ITriggerBinding
     {
         _ = context ?? throw new ArgumentNullException(nameof(context));
 
-        return Task.FromResult<IListener>(new RabbitMQListener(context.Executor, this.service, this.queueName, this.manualAck, this.logger, context.Descriptor, this.prefetchCount));
+        return Task.FromResult<IListener>(new RabbitMQListener(context.Executor, this.service, this.queueName, this.disableAck, this.logger, context.Descriptor, this.prefetchCount));
     }
 
     public ParameterDescriptor ToParameterDescriptor()

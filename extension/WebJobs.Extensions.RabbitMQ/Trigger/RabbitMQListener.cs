@@ -8,7 +8,6 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs.Host.Executors;
 using Microsoft.Azure.WebJobs.Host.Listeners;
@@ -29,7 +28,7 @@ internal sealed class RabbitMQListener : IListener, IScaleMonitor<RabbitMQTrigge
     private readonly ITriggeredFunctionExecutor executor;
     private readonly string queueName;
     private readonly ushort prefetchCount;
-    private readonly bool manualAck;
+    private readonly bool disableAck;
     private readonly IRabbitMQService service;
     private readonly ILogger logger;
     private readonly string functionId;
@@ -44,7 +43,7 @@ internal sealed class RabbitMQListener : IListener, IScaleMonitor<RabbitMQTrigge
         ITriggeredFunctionExecutor executor,
         IRabbitMQService service,
         string queueName,
-        bool manualAck,
+        bool disableAck,
         ILogger logger,
         FunctionDescriptor functionDescriptor,
         ushort prefetchCount)
@@ -52,7 +51,7 @@ internal sealed class RabbitMQListener : IListener, IScaleMonitor<RabbitMQTrigge
         this.executor = executor;
         this.service = service;
         this.queueName = queueName;
-        this.manualAck = manualAck;
+        this.disableAck = disableAck;
         this.logger = logger;
         this.rabbitMQModel = this.service.RabbitMQModel;
         _ = functionDescriptor ?? throw new ArgumentNullException(nameof(functionDescriptor));
@@ -134,7 +133,7 @@ internal sealed class RabbitMQListener : IListener, IScaleMonitor<RabbitMQTrigge
                 // Acknowledge the existing message after the message is re-published.
                 this.rabbitMQModel.BasicAck(args.DeliveryTag, multiple: false);
             }
-            else if (!this.manualAck)
+            else if (!this.disableAck)
             {
                 // Acknowledge the existing message if manualAck is not set and function execution was successful.
                 this.rabbitMQModel.BasicAck(args.DeliveryTag, false);

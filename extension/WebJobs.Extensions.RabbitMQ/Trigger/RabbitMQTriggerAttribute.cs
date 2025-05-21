@@ -42,5 +42,5 @@ public sealed class RabbitMQTriggerAttribute : Attribute
     /// <summary>
     /// Gets or sets a value indicating whether message acknowledgements would be done manually.
     /// </summary>
-    public bool ManualAck { get; set; }
+    public bool DisableAck { get; set; }
 }
