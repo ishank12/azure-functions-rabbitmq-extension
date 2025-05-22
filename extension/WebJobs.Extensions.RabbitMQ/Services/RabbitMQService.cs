@@ -3,6 +3,7 @@
 
 using System;
 using System.Net.Security;
+using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 
 namespace Microsoft.Azure.WebJobs.Extensions.RabbitMQ;
@@ -25,10 +26,10 @@ internal sealed class RabbitMQService : IRabbitMQService
         this.PublishBatchLock = new object();
     }
 
-    public RabbitMQService(string connectionString, string queueName, bool disableCertificateValidation)
+    public RabbitMQService(string connectionString, string queueName, bool disableCertificateValidation, ILogger logger)
         : this(connectionString, disableCertificateValidation)
     {
-        this.RabbitMQModel = new RabbitMQModel(this.Model);
+        this.RabbitMQModel = new RabbitMQModel(this.Model, logger);
         _ = queueName ?? throw new ArgumentNullException(nameof(queueName));
 
         this.Model.QueueDeclarePassive(queueName); // Throws exception if queue doesn't exist

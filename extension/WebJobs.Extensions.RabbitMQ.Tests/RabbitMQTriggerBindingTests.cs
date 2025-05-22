@@ -46,7 +46,7 @@ public class RabbitMQTriggerBindingTests
 
         ReadOnlyMemory<byte> body = buffer;
         var eventArgs = new BasicDeliverEventArgs("ConsumerName", deliveryTag, false, "n/a", "QueueName", null, body);
-        var messageActions = new RabbitMQMessageActions(Mock.Of<IModel>(), eventArgs);
+        var messageActions = new RabbitMQMessageActions(Mock.Of<IRabbitMQModel>(), eventArgs);
 
         var data = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
         {
@@ -87,7 +87,7 @@ public class RabbitMQTriggerBindingTests
 
         ReadOnlyMemory<byte> body = buffer;
         var eventArgs = new BasicDeliverEventArgs("ConsumerName", deliveryTag, false, "n/a", "QueueName", null, body);
-        var messageActions = new RabbitMQMessageActions(Mock.Of<IModel>(), eventArgs);
+        var messageActions = new RabbitMQMessageActions(Mock.Of<IRabbitMQModel>(), eventArgs);
 
         IReadOnlyDictionary<string, object> bindingData = RabbitMQTriggerBinding.CreateBindingData(eventArgs, messageActions);
 

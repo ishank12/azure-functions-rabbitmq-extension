@@ -23,6 +23,8 @@ public interface IRabbitMQModel
 
     string BasicConsume(string queue, bool autoAck, IBasicConsumer consumer);
 
+    void OnMessageConsumed(string consumerTag, ulong deliveryTag);
+
     void BasicAck(ulong deliveryTag, bool multiple);
 
     void BasicReject(ulong deliveryTag, bool requeue);

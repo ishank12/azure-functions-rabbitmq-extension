@@ -41,7 +41,7 @@ internal class RabbitMQTriggerBinding : ITriggerBinding
     public Task<ITriggerData> BindAsync(object value, ValueBindingContext context)
     {
         var message = (BasicDeliverEventArgs)value;
-        IReadOnlyDictionary<string, object> bindingData = CreateBindingData(message, this.disableAck ? new RabbitMQMessageActions(this.service.Model, message) : null);
+        IReadOnlyDictionary<string, object> bindingData = CreateBindingData(message, this.disableAck ? new RabbitMQMessageActions(this.service.RabbitMQModel, message) : null);
 
         return Task.FromResult<ITriggerData>(new TriggerData(new BasicDeliverEventArgsValueProvider(message, this.parameterType), bindingData));
     }

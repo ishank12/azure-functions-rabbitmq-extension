@@ -96,6 +96,8 @@ internal sealed class RabbitMQListener : IListener, IScaleMonitor<RabbitMQTrigge
 
         this.consumer.Received += async (model, args) =>
         {
+            this.rabbitMQModel.OnMessageConsumed(args.ConsumerTag, args.DeliveryTag);
+
             // The RabbitMQ client rents an array from the ArrayPool to hold a copy of the message body, and passes it
             // to the listener. Once all event handlers are executed, the array is returned back to the pool so that the
             // memory can be reused for future messages for that connection. However, since our event handler is async,

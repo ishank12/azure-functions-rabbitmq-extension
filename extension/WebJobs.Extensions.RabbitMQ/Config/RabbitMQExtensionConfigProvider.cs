@@ -90,7 +90,7 @@ internal class RabbitMQExtensionConfigProvider : IExtensionConfigProvider
     {
         string[] keyArray = { connectionString, queueName, disableCertificateValidation.ToString() };
         string key = string.Join(",", keyArray);
-        return this.connectionParametersToService.GetOrAdd(key, _ => this.rabbitMQServiceFactory.CreateService(connectionString, queueName, disableCertificateValidation));
+        return this.connectionParametersToService.GetOrAdd(key, _ => this.rabbitMQServiceFactory.CreateService(connectionString, queueName, disableCertificateValidation, this.logger));
     }
 
     // Overloaded method used only for getting the RabbitMQ client

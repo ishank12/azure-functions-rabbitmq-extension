@@ -2,16 +2,22 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 
 namespace Microsoft.Azure.WebJobs.Extensions.RabbitMQ;
 
 public class RabbitMQModel : IRabbitMQModel
 {
-    public RabbitMQModel(IModel model)
+    private readonly ILogger logger;
+    private readonly ConcurrentDictionary<ulong, byte> deliveredTags = new();
+
+    public RabbitMQModel(IModel model, ILogger logger)
     {
         this.Model = model;
+        this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public IModel Model { get; }
@@ -46,14 +52,33 @@ public class RabbitMQModel : IRabbitMQModel
         return this.Model.BasicConsume(queue, autoAck, consumer);
     }
 
+    public void OnMessageConsumed(string consumerTag, ulong deliveryTag)
+    {
+        this.deliveredTags.TryAdd(deliveryTag, 0);
+    }
+
     public void BasicAck(ulong deliveryTag, bool multiple)
     {
-        this.Model.BasicAck(deliveryTag, multiple);
+        if (this.deliveredTags.TryRemove(deliveryTag, out _))
+        {
+            this.Model.BasicAck(deliveryTag, multiple);
+        }
+        else
+        {
+            this.logger.LogError($"Failed to acknowledge the message. DeliveryTag ({deliveryTag}) not found.");
+        }
     }
 
     public void BasicReject(ulong deliveryTag, bool requeue)
     {
-        this.Model.BasicReject(deliveryTag, requeue);
+        if (this.deliveredTags.TryRemove(deliveryTag, out _))
+        {
+            this.Model.BasicReject(deliveryTag, requeue);
+        }
+        else
+        {
+            this.logger.LogError($"Failed to reject the message. DeliveryTag ({deliveryTag}) not found.");
+        }
     }
 
     public void BasicPublish(string exchange, string routingKey, IBasicProperties basicProperties, ReadOnlyMemory<byte> body)

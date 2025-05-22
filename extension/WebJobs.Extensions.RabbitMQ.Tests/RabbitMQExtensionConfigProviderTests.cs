@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -17,7 +18,7 @@ public class RabbitMQExtensionConfigProviderTests
         var rabbitmqServiceFactory = new Mock<IRabbitMQServiceFactory>();
 
         rabbitmqServiceFactory
-            .SetupSequence(a => a.CreateService(It.IsAny<string>(), It.IsAny<string>(), false))
+            .SetupSequence(a => a.CreateService(It.IsAny<string>(), It.IsAny<string>(), false, It.IsAny<ILogger>()))
             .Returns(new Mock<IRabbitMQService>().Object);
 
         rabbitmqServiceFactory
