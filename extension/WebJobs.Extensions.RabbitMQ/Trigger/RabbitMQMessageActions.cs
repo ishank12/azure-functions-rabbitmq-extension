@@ -17,9 +17,9 @@ public class RabbitMQMessageActions
         this.message = message;
     }
 
-    public async Task Reject()
+    public async Task Reject(bool requeue = false)
     {
-        await Task.Run(() => this.rabbitMQMOdel.BasicReject(this.message.DeliveryTag, requeue: false));
+        await Task.Run(() => this.rabbitMQMOdel.BasicReject(this.message.DeliveryTag, requeue));
     }
 
     public async Task Acknowledge()
